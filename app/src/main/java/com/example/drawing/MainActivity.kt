@@ -1,17 +1,23 @@
 package com.example.drawing
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.drawing.ui.theme.DrawingTheme
@@ -21,38 +27,49 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             DrawingTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Drawing1()
-                }
+                Drawing()
             }
         }
     }
 }
 
 @Composable
-fun Drawing1(colors: ColorScheme = MaterialTheme.colorScheme) {
-    Canvas(
-        modifier = Modifier.fillMaxSize()
+fun Drawing() {
+    val colors = listOf(
+        MaterialTheme.colorScheme.background,
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.onPrimary
+    )
+    var clickCounter by remember { mutableStateOf(0) }
+
+    Canvas(modifier = Modifier
+        .fillMaxSize()
+        .background(colors[(clickCounter+3) % 3])
+        .clickable {
+            clickCounter += 1
+            Log.i("STATE", "Clicks counter: ${clickCounter}")
+        }
     ) {
-        val sqrSize = size.height * .2f
-        val center = Offset(size.width/2f, size.height/2f)
-        translate (left = -sqrSize/2f, -sqrSize/2f){
+        val sqrSize1 = size.height * .4f
+        val sqrSize2 = size.height * .2f
+        translate(
+            left = -sqrSize1 / 2f,
+            top = -sqrSize1 / 2f
+        ) {
             drawRect(
-                colors.primary,
-                size = Size(sqrSize, sqrSize),
-                topLeft = center
+                color = colors[(clickCounter + 2) % 3],
+                topLeft = Offset(size.width / 2f, size.height / 2f),
+                size = Size(sqrSize1, sqrSize1)
             )
         }
-        val sqrSize2 = size.height * .1f
-        translate (left = -sqrSize2/2f, -sqrSize2/2f){
+        translate(
+            left = -sqrSize2 / 2f,
+            top = -sqrSize2 / 2f
+        ) {
             drawRect(
-                colors.onPrimary,
-                size = Size(sqrSize2, sqrSize2),
-                topLeft = center
+                color = colors[(clickCounter + 1) % 3],
+                topLeft = Offset(size.width / 2f, size.height / 2f),
+                size = Size(sqrSize2, sqrSize2)
             )
         }
     }
@@ -62,12 +79,6 @@ fun Drawing1(colors: ColorScheme = MaterialTheme.colorScheme) {
 @Composable
 fun GreetingPreview() {
     DrawingTheme {
-        // A surface container using the 'background' color from the theme
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            Drawing1()
-        }
+        Drawing()
     }
 }
