@@ -7,18 +7,32 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.drawing.ui.theme.DrawingTheme
 
@@ -27,50 +41,52 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             DrawingTheme {
-                Drawing()
+                DrawOnClick()
             }
         }
     }
 }
 
-@Composable
-fun Drawing() {
-    val colors = listOf(
-        MaterialTheme.colorScheme.background,
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.onPrimary
-    )
-    var clickCounter by remember { mutableStateOf(0) }
+data class Circle (
+    var centroidSize: Float = 0f,
+    var position: Offset = Offset(0f,0f),
+    var color: Color = Color.Blue
+)
 
-    Canvas(modifier = Modifier
-        .fillMaxSize()
-        .background(colors[(clickCounter+3) % 3])
-        .clickable {
-            clickCounter += 1
-            Log.i("STATE", "Clicks counter: ${clickCounter}")
-        }
+@Composable
+fun DrawOnClick() {
+    var circles by remember { mutableStateOf(listOf<Circle>()) }
+    //TODO: Add a color picker in the interface. Ex: https://www.section.io/engineering-education/creating-a-scratch-pad-with-jetpack-compose/
+    val color1 = MaterialTheme.colorScheme.onPrimary
+    var tempPosition by remember { mutableStateOf(Offset.Zero) }
+    var tempSize by remember { mutableStateOf(0f) }
+    Canvas(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primary)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown().also {
+                        tempPosition = it.position
+                    }
+                    do {
+                        val event = awaitPointerEvent()
+                        tempSize++
+                    } while (event.changes.any { it.pressed })
+                    circles = circles + Circle(tempSize, tempPosition, color1)
+                    tempSize = 0f
+                }
+            }
+            .drawBehind {
+                drawCircle(color1, radius = tempSize, center = tempPosition)
+            }
     ) {
-        val sqrSize1 = size.height * .4f
-        val sqrSize2 = size.height * .2f
-        translate(
-            left = -sqrSize1 / 2f,
-            top = -sqrSize1 / 2f
-        ) {
-            drawRect(
-                color = colors[(clickCounter + 2) % 3],
-                topLeft = Offset(size.width / 2f, size.height / 2f),
-                size = Size(sqrSize1, sqrSize1)
-            )
-        }
-        translate(
-            left = -sqrSize2 / 2f,
-            top = -sqrSize2 / 2f
-        ) {
-            drawRect(
-                color = colors[(clickCounter + 1) % 3],
-                topLeft = Offset(size.width / 2f, size.height / 2f),
-                size = Size(sqrSize2, sqrSize2)
-            )
+        circles.forEach {
+            Log.d("DRAWING", "Drawing circle ${it}")
+            drawCircle(
+                color = it.color,
+                center = it.position,
+                radius = it.centroidSize)
         }
     }
 }
@@ -79,6 +95,6 @@ fun Drawing() {
 @Composable
 fun GreetingPreview() {
     DrawingTheme {
-        Drawing()
+        DrawOnClick()
     }
 }
