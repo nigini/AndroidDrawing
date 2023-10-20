@@ -56,6 +56,7 @@ fun DrawOnClick() {
 fun BubbleCanvas(drawingColor: Color) {
     //Idea from: https://stackoverflow.com/questions/64571945/
     var circles by remember { mutableStateOf(listOf<Circle>()) }
+
     var initialPosition by remember { mutableStateOf( Offset(0f,0f) ) }
     var tempSize by remember { mutableStateOf(0f) }
     var tempColor by remember { mutableStateOf(drawingColor) }
@@ -93,7 +94,7 @@ fun BubbleCanvas(drawingColor: Color) {
                     } while (!pointReleased)
                 }
             }
-            .drawBehind {
+            .drawBehind {//Bridging the "Gulf Of Evaluation"
                 drawCircle(drawingColor, radius = tempSize, center = initialPosition)
             }
     ) {

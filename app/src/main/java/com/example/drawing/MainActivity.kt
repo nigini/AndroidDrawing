@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,7 +28,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             DrawingTheme {
-                DrawOnClick()
             }
         }
     }
@@ -37,15 +38,30 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GreetingPreview() {
     DrawingTheme {
+        var angle by remember { mutableStateOf(0)} //No remember required!!!
+        var sqrSize = 300f
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
+                .aspectRatio(1f)
+                .clickable {
+                    angle += 20
+                }
         ) {
-            drawRect(
-                Color.Green,
-                size = Size(300f, 300f),
-                topLeft = Offset(0f,0f)
-            )
+            rotate(
+                degrees = angle.toFloat()
+            ) {
+                translate(
+                    top = (size.height/2) - (sqrSize/2),
+                    left = (size.width/2) - (sqrSize/2)
+                ) {
+                    drawRect(
+                        Color.Green,
+                        size = Size(sqrSize, sqrSize)
+                    )
+                }
+            }
         }
+        Text(text = "Angle: $angle")
     }
 }
