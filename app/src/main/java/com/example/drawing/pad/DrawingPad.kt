@@ -1,5 +1,6 @@
-package com.example.drawing
+package com.example.drawing.pad
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -27,39 +28,42 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.abs
 import kotlin.math.sqrt
-
-data class Circle (
-    var centroidSize: Float = 0f,
-    var position: Offset = Offset(0f,0f),
-    var color: Color = Color.Black
-)
 
 @Composable
 @Preview
 fun DrawOnClick() {
     var drawingColor by remember {mutableStateOf(Color.Black)}
+    val drawingStatus: DrawingUIState = viewModel()
+
     Column(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        ColorPicker1(){
+        ColorPicker1( drawingColor ){
             drawingColor = it
         }
-        BubbleCanvas(drawingColor = drawingColor)
+        BubbleCanvas(
+            drawingColor = {drawingColor},
+            circles = drawingStatus.circles(),
+            onDrawingChange = {
+                drawingStatus.addCircle(it)
+            }
+        )
     }
 }
 
 @Composable
-fun BubbleCanvas(drawingColor: Color) {
+fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChange: (Circle) -> Unit) {
     //Idea from: https://stackoverflow.com/questions/64571945/
-    var circles by remember { mutableStateOf(listOf<Circle>()) }
+    //var circles by remember { mutableStateOf(listOf<CircleUIState>()) }
 
     var initialPosition by remember { mutableStateOf( Offset(0f,0f) ) }
     var tempSize by remember { mutableStateOf(0f) }
-    var tempColor by remember { mutableStateOf(drawingColor) }
+//    var tempColor by remember { mutableStateOf(drawingColor) }
 
     Canvas(
         Modifier
@@ -67,9 +71,14 @@ fun BubbleCanvas(drawingColor: Color) {
             .clipToBounds()
             .background(MaterialTheme.colorScheme.primary)
             .pointerInput(Unit) {
+                Log.d("CANVAS_COLOR", "Pointer Input Scope: ${drawingColor().toHexCodeWithAlpha()}")
                 awaitEachGesture {
                     var pointReleased = false
                     do {
+                        Log.d(
+                            "CANVAS_COLOR",
+                            "Await Pointer Event Scope: ${drawingColor().toHexCodeWithAlpha()}"
+                        )
                         val event = awaitPointerEvent()
 
                         //Like this structure better: https://stackoverflow.com/questions/64571945/
@@ -85,8 +94,18 @@ fun BubbleCanvas(drawingColor: Color) {
                                 }
 
                                 PointerEventType.Release -> {
+                                    Log.d(
+                                        "CANVAS_COLOR",
+                                        "Pointer Input Change: ${drawingColor().toHexCodeWithAlpha()}"
+                                    )
                                     pointReleased = true
-                                    circles += Circle(tempSize, initialPosition, tempColor)
+                                    onDrawingChange(
+                                        Circle(
+                                            tempSize,
+                                            initialPosition,
+                                            drawingColor()
+                                        )
+                                    )
                                     tempSize = 0f
                                 }
                             }
@@ -95,10 +114,11 @@ fun BubbleCanvas(drawingColor: Color) {
                 }
             }
             .drawBehind {//Bridging the "Gulf Of Evaluation"
-                drawCircle(drawingColor, radius = tempSize, center = initialPosition)
+                Log.d("CANVAS_COLOR", "DrawScope: ${drawingColor().toHexCodeWithAlpha()}")
+                drawCircle(drawingColor(), radius = tempSize, center = initialPosition)
             }
     ) {
-        tempColor = drawingColor
+        //tempColor = drawingColor
         circles.forEach {
             drawCircle(
                 color = it.color,
@@ -111,9 +131,9 @@ fun BubbleCanvas(drawingColor: Color) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ColorPicker1(defaultColor:Color = Color.Black, onColorPick: (Color) -> Unit){
-    var colorName by remember { mutableStateOf(defaultColor.toHexCodeWithAlpha()) }
-    var currentColor by remember { mutableStateOf(defaultColor) }
+fun ColorPicker1(currentColor: Color, onColorPick: (Color) -> Unit){
+    var colorName by remember { mutableStateOf(currentColor.toHexCodeWithAlpha()) }
+    //var currentColor by remember { mutableStateOf(defaultColor) }
     Row (
         modifier = Modifier
             .height(50.dp)
@@ -122,12 +142,11 @@ fun ColorPicker1(defaultColor:Color = Color.Black, onColorPick: (Color) -> Unit)
             value = colorName,
             onValueChange = {
                 colorName = it
-                currentColor = try {
-                    Color(it.toColorInt())
+                try {
+                    onColorPick(Color(it.toColorInt()))
                 } catch (iaex: IllegalArgumentException) {
-                    defaultColor
+                    onColorPick(currentColor)
                 }
-                onColorPick(currentColor)
             }
         )
         Spacer(modifier = Modifier
