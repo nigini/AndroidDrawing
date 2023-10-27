@@ -2,6 +2,7 @@ package com.example.drawing.pad
 
 import android.util.Log
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Column
@@ -27,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
@@ -39,7 +39,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.moriafly.regret.Regret
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -53,18 +52,17 @@ fun DrawOnClick() {
 
 
     Scaffold(
-        bottomBar = {
-            BottomAppBar(
-                actions = {
-                    IconButton(onClick = {
-                        drawingStatus.undo()
-                        invalidation++
-                    }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Undo button.")
-                    }
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    drawingStatus.undo()
+                    invalidation++
                 }
-            )
-        }
+            ) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Undo button.")
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
     ) { innerPadding ->
         Column(
             Modifier
@@ -89,12 +87,8 @@ fun DrawOnClick() {
 
 @Composable
 fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChange: (Circle) -> Unit, redraw: Int) {
-    //Idea from: https://stackoverflow.com/questions/64571945/
-    //var circles by remember { mutableStateOf(listOf<CircleUIState>()) }
-
     var initialPosition by remember { mutableStateOf( Offset(0f,0f) ) }
     var tempSize by remember { mutableStateOf(0f) }
-//    var tempColor by remember { mutableStateOf(drawingColor) }
 
     Canvas(
         Modifier
@@ -136,7 +130,7 @@ fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChan
                 drawCircle(drawingColor(), radius = tempSize, center = initialPosition)
             },
     ) {
-        //SOURCE: https://stackoverflow.com/a/67241814/539223
+        //Trigger redraw idea: https://stackoverflow.com/a/67241814/539223
         redraw.apply {
             circles.forEach {
                 drawCircle(

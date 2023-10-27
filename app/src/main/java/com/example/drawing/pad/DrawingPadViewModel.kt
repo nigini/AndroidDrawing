@@ -1,9 +1,6 @@
 package com.example.drawing.pad
 
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
@@ -39,7 +36,6 @@ data class Circle (
 
 class DrawingUIState: ViewModel() {
     private var _circles = MutableStateFlow((mutableListOf<Circle>()))
-    var undoOn: Boolean = false
 
     fun circles(): List<Circle> {
         return _circles.value
@@ -47,21 +43,9 @@ class DrawingUIState: ViewModel() {
 
     fun addCircle(circle: Circle) {
         _circles.value.add(circle)
-        updateUndoOn()
     }
 
     fun undo() {
-        val deleted = _circles.value.removeLastOrNull()
-        updateUndoOn()
-    }
-
-    private fun updateUndoOn() {
-        undoOn = _circles.value.size > 0
-        Log.d("DRAWING_STATUS", "UNDO is ON? $undoOn")
-    }
-
-    fun canUndo():Boolean {
-        Log.d("DRAWING_STATUS", "UNDO is ON? ${_circles.value.size > 0}")
-        return _circles.value.size > 0
+        _circles.value.removeLastOrNull()
     }
 }
