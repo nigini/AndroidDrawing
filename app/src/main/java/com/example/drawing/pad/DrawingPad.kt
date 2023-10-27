@@ -10,14 +10,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
@@ -29,35 +39,56 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.moriafly.regret.Regret
 import kotlin.math.abs
 import kotlin.math.sqrt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
 fun DrawOnClick() {
     var drawingColor by remember {mutableStateOf(Color.Black)}
     val drawingStatus: DrawingUIState = viewModel()
+    var invalidation by remember { mutableStateOf(0) }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        ColorPicker1( drawingColor ){
-            drawingColor = it
+
+    Scaffold(
+        bottomBar = {
+            BottomAppBar(
+                actions = {
+                    IconButton(onClick = {
+                        drawingStatus.undo()
+                        invalidation++
+                    }) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Undo button.")
+                    }
+                }
+            )
         }
-        BubbleCanvas(
-            drawingColor = {drawingColor},
-            circles = drawingStatus.circles(),
-            onDrawingChange = {
-                drawingStatus.addCircle(it)
+    ) { innerPadding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            ColorPicker1(drawingColor) {
+                drawingColor = it
             }
-        )
+            BubbleCanvas(
+                drawingColor = { drawingColor },
+                circles = drawingStatus.circles(),
+                onDrawingChange = {
+                    drawingStatus.addCircle(it)
+                },
+                invalidation
+            )
+        }
     }
 }
 
 @Composable
-fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChange: (Circle) -> Unit) {
+fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChange: (Circle) -> Unit, redraw: Int) {
     //Idea from: https://stackoverflow.com/questions/64571945/
     //var circles by remember { mutableStateOf(listOf<CircleUIState>()) }
 
@@ -75,10 +106,6 @@ fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChan
                 awaitEachGesture {
                     var pointReleased = false
                     do {
-                        Log.d(
-                            "CANVAS_COLOR",
-                            "Await Pointer Event Scope: ${drawingColor().toHexCodeWithAlpha()}"
-                        )
                         val event = awaitPointerEvent()
 
                         //Like this structure better: https://stackoverflow.com/questions/64571945/
@@ -94,17 +121,9 @@ fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChan
                                 }
 
                                 PointerEventType.Release -> {
-                                    Log.d(
-                                        "CANVAS_COLOR",
-                                        "Pointer Input Change: ${drawingColor().toHexCodeWithAlpha()}"
-                                    )
                                     pointReleased = true
                                     onDrawingChange(
-                                        Circle(
-                                            tempSize,
-                                            initialPosition,
-                                            drawingColor()
-                                        )
+                                        Circle(tempSize, initialPosition, drawingColor())
                                     )
                                     tempSize = 0f
                                 }
@@ -114,17 +133,18 @@ fun BubbleCanvas(drawingColor: () -> Color, circles: List<Circle>, onDrawingChan
                 }
             }
             .drawBehind {//Bridging the "Gulf Of Evaluation"
-                Log.d("CANVAS_COLOR", "DrawScope: ${drawingColor().toHexCodeWithAlpha()}")
                 drawCircle(drawingColor(), radius = tempSize, center = initialPosition)
-            }
+            },
     ) {
-        //tempColor = drawingColor
-        circles.forEach {
-            drawCircle(
-                color = it.color,
-                center = it.position,
-                radius = it.centroidSize
-            )
+        //SOURCE: https://stackoverflow.com/a/67241814/539223
+        redraw.apply {
+            circles.forEach {
+                drawCircle(
+                    color = it.color,
+                    center = it.position,
+                    radius = it.centroidSize
+                )
+            }
         }
     }
 }
